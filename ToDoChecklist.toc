@@ -1,0 +1,11 @@
+## Interface: 110002
+## Title: ToDo Checklist
+## Notes: Prosta lista zadań
+## Author: Rudy
+## Version: 0.2
+## SavedVariables: Todo_CharacterData
+## SavedVariables: Todo_Settings
+## SavedVariables: Todo_CompletedTasks
+
+ToDoChecklist.lua
+ToDoChecklist_settings.lua
