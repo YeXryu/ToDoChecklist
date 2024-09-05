@@ -65,12 +65,11 @@ local tasks = {
 local function GetCurrencyAmount()
     local currencyID = 3028
     local currencyInfo = C_CurrencyInfo.GetCurrencyInfo(currencyID)
-    if currencyInfo then
+    --if currencyInfo then
         return currencyInfo.quantity
-    else
-        return 0
-    end
-
+    --else
+       -- return 0
+    --end
 end
 
 -- Funkcja do sprawdzania itemlevela
@@ -168,7 +167,7 @@ end
 local function CurrencyCheck()
     local name = UnitName("player")
     Todo_CharacterData[name].currency3028 = GetCurrencyAmount()
-    print("Currency check")
+    print("Currency check ", Todo_CharacterData[name].currency3028)
 end
 
 local ilvlChecked = false
@@ -194,6 +193,7 @@ local function ShowKeysText()
     if level == 80 then
         -- Wyświetlanie informacji o walucie i poziomie przedmiotów
         frame.currencyText:Show()  -- Pokaż tekst waluty i poziomu przedmiotów
+        frame.currencyText:SetText("Restored Coffer Keys: " .. GetCurrencyAmount())
         print("Postac powyzej 80, wyswietlam keye")
     else
         frame.currencyText:Hide()  -- Ukryj tekst waluty i poziomu przedmiotów
@@ -206,6 +206,7 @@ local function ShowIlvlText()
     if level == 80 then
         -- Wyświetlanie informacji o walucie i poziomie przedmiotów
         frame.IlvlText:Show()  -- Pokaż tekst waluty i poziomu przedmiotów
+        frame.IlvlText:SetText("Equipped ilvl: " .. GetItemLevel())
         print("Postac powyzej 80, wyswietlam ilvl")
     else
         frame.IlvlText:Hide()  -- Ukryj tekst waluty i poziomu przedmiotów
@@ -232,16 +233,27 @@ local function UpdateLogoutTime()
     Todo_CharacterData[name].lastLogin = GetServerTime()  -- Aktualizacja lastLogin
 end
 
+local CharacterChecked = false
+
 local function InitializeCharacterData()
-    if IsWeeklyReset() then
+    local cooldownTime = 1
+    if not CharacterChecked then
+        if IsWeeklyReset() then
         ShowResetMessage()
         -- Zresetowanie zadań dla postaci
         Todo_CompletedTasks[UnitName("player")] = 0
+        end
+        UpdateCharacterData()
+        UpdateTaskData()
+        ShowKeysText()
+        ShowIlvlText()
+        CurrencyCheck()
+        ilvlCheck()
+        CharacterChecked = true
+        C_Timer.After(cooldownTime, function()
+            CharacterChecked = false
+        end)
     end
-    UpdateCharacterData()
-    UpdateTaskData()
-    ShowKeysText()
-    ShowIlvlText()
 end
 
 -- Funkcja wywoływana przy starcie gry
@@ -254,16 +266,19 @@ local function OnEvent(self, event, ...)
             frame:SetPoint(pos.point, pos.relativeTo, pos.relativePoint, pos.xOfs, pos.yOfs)
         end
 
-    elseif event == "PLAYER_LOGIN" then
-        C_Timer.After(5, InitializeCharacterData)
+    elseif event == "PLAYER_LOGIN" or event == "PLAYER_ENTERING_WORLD" then
+        C_Timer.After(1, InitializeCharacterData)
 
     elseif event == "PLAYER_LEVEL_UP" then
         UpdateCharacterData()
         ShowKeysText()
         ShowIlvlText()
 
-    elseif event == "PLAYER_MONEY" or event == "CURRENCY_DISPLAY_UPDATE" then
-        CurrencyCheck()
+    elseif event == "CURRENCY_DISPLAY_UPDATE" then
+        local currencyID = ...
+        if currencyID == 3028 then
+            CurrencyCheck()
+        end
 
     elseif event == "QUEST_TURNED_IN" then
         UpdateTaskData()
@@ -282,7 +297,6 @@ frame:RegisterEvent("PLAYER_LOGIN")
 frame:RegisterEvent("PLAYER_LEVEL_UP")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:RegisterEvent("QUEST_TURNED_IN")
-frame:RegisterEvent("PLAYER_MONEY")
 frame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
 frame:RegisterEvent("PLAYER_AVG_ITEM_LEVEL_UPDATE")
 frame:RegisterEvent("PLAYER_LOGOUT")
