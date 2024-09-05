@@ -54,7 +54,7 @@ local tasks = {
     { name = "Weekly Dungeon Quest", maximum = 1, quests = { { questId = 83443 }, { questId = 83457 }}},
     { name = "Weekly WQ Cache", maximum = 2, quests = { { questId = 83280 }, { questId = 83281 }, { questId = 82582 }}},
     { name = "Worldsoul Quest", maximum = 1, quests = { { questId = 82452 } }},
-    { name = "Weekly PvP Quest", maximum = 1, quests = { { questId = 80186 }}},-- { questId = 80671 }, { questId = 80672 }}},
+    { name = "Weekly PvP Quest", maximum = 1, quests = { { questId = 80186 },{ questId = 80187 }}},-- { questId = 80672 }}},
     { name = "Weekly Azj-Kahet", maximum = 1, quests = { { questId = 80670 }, { questId = 80671 }, { questId = 80672 }}},
     { name = "Weekly Hallowfall", maximum = 1, quests = { { questId = 76586 } }},
     { name = "Weekly Ringing Deeps", maximum = 1, quests = { { questId = 83333 } }},
@@ -70,6 +70,7 @@ local function GetCurrencyAmount()
     else
         return 0
     end
+
 end
 
 -- Funkcja do sprawdzania itemlevela
@@ -164,31 +165,53 @@ local function ShowResetMessage()
     PlaySound(12867, "Master")  -- Dźwięk powiadomienia
 end
 
+-- Aktualizacja currency 
+local function CurrencyCheck()
+    local name = UnitName("player")
+    Todo_CharacterData[name].currency3028 = GetCurrencyAmount()
+    print("Currency check")
+end
+
+--Aktualizacja ilvla
+local function ilvlCheck()
+    local name = UnitName("player")
+    Todo_CharacterData[name].equippedIlvl = GetItemLevel()
+    print("Aktualizacja ilvl: ", GetItemLevel())
+end
+
+-- Sprawdzanie poziomu postaci przed wyświetlaniem tekstu waluty i poziomu przedmiotów
+local function ShowKeysAndIlvl()
+    local level = UnitLevel("player")
+    local equippedIlvl = GetItemLevel()
+    local currency3028 = GetCurrencyAmount()
+    if level == 80 then
+        -- Wyświetlanie informacji o walucie i poziomie przedmiotów
+        frame.currencyText:SetText("Equipped ilvl: " .. equippedIlvl .."\nRestored Coffer Keys: " .. currency3028)
+        frame.currencyText:Show()  -- Pokaż tekst waluty i poziomu przedmiotów
+        print("Postac powyzej 80, wyswietlam ilvl i keye")
+    else
+        frame.currencyText:Hide()  -- Ukryj tekst waluty i poziomu przedmiotów
+        print("Postac ponizej 80, chowam ilvl i keye")
+    end
+end
+
 -- Funkcja aktualizująca dane o bieżącej postaci i walucie
 local function UpdateCharacterData()
     local name = UnitName("player")
     local level = UnitLevel("player")
     local class = UnitClass("player")
-    local currency3028 = GetCurrencyAmount()
-    local equippedIlvl =  GetItemLevel()
-    -- Sprawdzanie poziomu postaci przed aktualizacją tekstu waluty i poziomu przedmiotów
-    if level == 80 then
-        
-        -- Wyświetlanie informacji o walucie i poziomie przedmiotów
-        frame.currencyText:SetText("Equipped ilvl: " .. equippedIlvl .."\nRestored Coffer Keys: " .. currency3028)
-        frame.currencyText:Show()  -- Pokaż tekst waluty i poziomu przedmiotów
-    else
-        frame.currencyText:Hide()  -- Ukryj tekst waluty i poziomu przedmiotów
-    end
 
     -- Zapisanie informacji o bieżącej postaci do zmiennej globalnej
     Todo_CharacterData[name] = Todo_CharacterData[name] or {}
     Todo_CharacterData[name].level = level
     Todo_CharacterData[name].class = class
-    Todo_CharacterData[name].currency3028 = GetCurrencyAmount()
-    Todo_CharacterData[name].equippedIlvl = equippedIlvl  -- Zapisanie equipped ilvl
+    print("Zapisałem ".. name .." | " .. level .." | " .. class)
+end
+
+-- Funkcja informująca o czasie ostatniego wylogowania
+local function UpdateLogoutTime()
+    local name = UnitName("player")
     Todo_CharacterData[name].lastLogin = GetServerTime()  -- Aktualizacja lastLogin
-    print("Zapisałem ".." | ".. name .." | " .. level .." | " .. class .." | " .. currency3028 .." | " .. equippedIlvl)
 end
 
 local function InitializeCharacterData()
@@ -199,6 +222,7 @@ local function InitializeCharacterData()
     end
     UpdateCharacterData()
     UpdateTaskData()
+    ShowKeysAndIlvl()
 end
 
 -- Funkcja wywoływana przy starcie gry
@@ -214,28 +238,33 @@ local function OnEvent(self, event, ...)
     elseif event == "PLAYER_ENTERING_WORLD" then
         C_Timer.After(5, InitializeCharacterData)
 
-    elseif event == "PLAYER_LOGIN" or event == "PLAYER_MONEY" or event == "CURRENCY_DISPLAY_UPDATE" then
+    elseif event == "PLAYER_LOGIN" or event == "PLAYER_LEVEL_UP" then
         UpdateCharacterData()
+
+    elseif event == "PLAYER_MONEY" or event == "CURRENCY_DISPLAY_UPDATE" then
+        CurrencyCheck()
 
     elseif event == "QUEST_TURNED_IN" then
         UpdateTaskData()
 
     elseif event == "PLAYER_AVG_ITEM_LEVEL_UPDATE" then
-        UpdateCharacterData()
+        ilvlCheck()
 
---elseif event == "PLAYER_LOGOUT" then
+    elseif event == "PLAYER_LOGOUT" then
+        UpdateLogoutTime()
     end
 end
 
 -- Rejestracja zdarzeń
 frame:RegisterEvent("ADDON_LOADED")
 frame:RegisterEvent("PLAYER_LOGIN")
+frame:RegisterEvent("PLAYER_LEVEL_UP")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:RegisterEvent("QUEST_TURNED_IN")
 frame:RegisterEvent("PLAYER_MONEY")
 frame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
 frame:RegisterEvent("PLAYER_AVG_ITEM_LEVEL_UPDATE")
---frame:RegisterEvent("PLAYER_LOGOUT")
+frame:RegisterEvent("PLAYER_LOGOUT")
 frame:SetScript("OnEvent", OnEvent)
 
 -- Tworzenie tekstu dla każdego zadania
