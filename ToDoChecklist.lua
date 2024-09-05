@@ -76,7 +76,6 @@ end
 -- Funkcja do sprawdzania itemlevela
 local function GetItemLevel()
     local itemlevel = math.floor(select(2, GetAverageItemLevel()))
-    print("Retrieved item level: ", itemlevel)  -- Dodane do debugowania
     return itemlevel
 end
 
@@ -172,26 +171,45 @@ local function CurrencyCheck()
     print("Currency check")
 end
 
+local ilvlChecked = false
+
 --Aktualizacja ilvla
 local function ilvlCheck()
+    local cooldownTime = 1
+    if not ilvlChecked then
     local name = UnitName("player")
     Todo_CharacterData[name].equippedIlvl = GetItemLevel()
+    frame.IlvlText:SetText("Equipped ilvl: " .. GetItemLevel())
     print("Aktualizacja ilvl: ", GetItemLevel())
+    ilvlChecked = true
+    C_Timer.After(cooldownTime, function()
+        ilvlChecked = false
+    end)
+    end
 end
 
--- Sprawdzanie poziomu postaci przed wyświetlaniem tekstu waluty i poziomu przedmiotów
-local function ShowKeysAndIlvl()
+-- Sprawdzanie poziomu postaci przed wyświetlaniem tekstu waluty
+local function ShowKeysText()
     local level = UnitLevel("player")
-    local equippedIlvl = GetItemLevel()
-    local currency3028 = GetCurrencyAmount()
     if level == 80 then
         -- Wyświetlanie informacji o walucie i poziomie przedmiotów
-        frame.currencyText:SetText("Equipped ilvl: " .. equippedIlvl .."\nRestored Coffer Keys: " .. currency3028)
         frame.currencyText:Show()  -- Pokaż tekst waluty i poziomu przedmiotów
-        print("Postac powyzej 80, wyswietlam ilvl i keye")
+        print("Postac powyzej 80, wyswietlam keye")
     else
         frame.currencyText:Hide()  -- Ukryj tekst waluty i poziomu przedmiotów
-        print("Postac ponizej 80, chowam ilvl i keye")
+        print("Postac ponizej 80, chowam keye")
+    end
+end
+-- Sprawdzanie poziomu postaci przed wyświetlaniem tekstu poziomu przedmiotów
+local function ShowIlvlText()
+    local level = UnitLevel("player")
+    if level == 80 then
+        -- Wyświetlanie informacji o walucie i poziomie przedmiotów
+        frame.IlvlText:Show()  -- Pokaż tekst waluty i poziomu przedmiotów
+        print("Postac powyzej 80, wyswietlam ilvl")
+    else
+        frame.IlvlText:Hide()  -- Ukryj tekst waluty i poziomu przedmiotów
+        print("Postac ponizej 80, chowam ilvl")
     end
 end
 
@@ -222,7 +240,8 @@ local function InitializeCharacterData()
     end
     UpdateCharacterData()
     UpdateTaskData()
-    ShowKeysAndIlvl()
+    ShowKeysText()
+    ShowIlvlText()
 end
 
 -- Funkcja wywoływana przy starcie gry
@@ -235,11 +254,13 @@ local function OnEvent(self, event, ...)
             frame:SetPoint(pos.point, pos.relativeTo, pos.relativePoint, pos.xOfs, pos.yOfs)
         end
 
-    elseif event == "PLAYER_ENTERING_WORLD" then
+    elseif event == "PLAYER_LOGIN" then
         C_Timer.After(5, InitializeCharacterData)
 
-    elseif event == "PLAYER_LOGIN" or event == "PLAYER_LEVEL_UP" then
+    elseif event == "PLAYER_LEVEL_UP" then
         UpdateCharacterData()
+        ShowKeysText()
+        ShowIlvlText()
 
     elseif event == "PLAYER_MONEY" or event == "CURRENCY_DISPLAY_UPDATE" then
         CurrencyCheck()
@@ -248,7 +269,7 @@ local function OnEvent(self, event, ...)
         UpdateTaskData()
 
     elseif event == "PLAYER_AVG_ITEM_LEVEL_UPDATE" then
-        ilvlCheck()
+        C_Timer.After(0.5,ilvlCheck)
 
     elseif event == "PLAYER_LOGOUT" then
         UpdateLogoutTime()
@@ -291,6 +312,12 @@ frame.currencyText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 frame.currencyText:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 10, 40)  -- Ustawienie pozycji tekstu
 frame.currencyText:SetJustifyH("LEFT")
 frame.currencyText:SetText("Restored Coffer Keys: " .. GetCurrencyAmount())
+
+-- Dodanie tekstu dla itemlvla
+frame.IlvlText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+frame.IlvlText:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 10, 50)  -- Ustawienie pozycji tekstu
+frame.IlvlText:SetJustifyH("LEFT")
+frame.IlvlText:SetText("Equipped ilvl: " .. GetItemLevel())
 
 -- Dodanie przycisku do wyświetlania danych postaci
 local showButton = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
