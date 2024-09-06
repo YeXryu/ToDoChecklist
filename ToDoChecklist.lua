@@ -138,7 +138,6 @@ end
 local playerLevel
 -- Funkcja aktualizująca dane o zadaniach
 local function UpdateTaskData(tasklist)
-    print("UpdateTaskData started")
     playerLevel = UnitLevel("player")
     if playerLevel < 80 then
         -- Ukryj listę zadań
@@ -251,12 +250,17 @@ local function IsWeeklyReset()
     -- Sprawdź, czy czas ostatniego logowania dla tej postaci jest przed ostatnim resetem
     local playerName = UnitName("player")
     local lastLogin = Todo_CharacterData[playerName] and Todo_CharacterData[playerName].lastLogin or 0
-    if lastLogin < lastReset then
-    --if lastLogin < serverTime then -- debugging
-        print("Weekly reset detected")
-        return true
+    if lastLogin ~= 0 then 
+        if lastLogin < lastReset then
+        --if lastLogin < serverTime then -- debugging
+            print("Weekly reset detected")
+            return true
+        else
+            print("No weekly reset")
+            return false
+        end
     else
-        print("No weekly reset")
+        print("Inicjaliacja weekly resetu")
         return false
     end
 end
@@ -271,7 +275,6 @@ end
 local function CurrencyCheck()
     local name = UnitName("player")
     Todo_CharacterData[name].RCKeys3028 = GetCurrencyAmount()
-    print("Currency check ", Todo_CharacterData[name].RCKeys3028)
 end
 
 local ilvlChecked = false
@@ -283,7 +286,6 @@ local function ilvlCheck()
     local name = UnitName("player")
     Todo_CharacterData[name].equippedIlvl = GetItemLevel()
     frame.IlvlText:SetText("Equipped ilvl: " .. GetItemLevel())
-    print("Aktualizacja ilvl: ", GetItemLevel())
     ilvlChecked = true
     C_Timer.After(cooldownTime, function()
         ilvlChecked = false
@@ -298,10 +300,8 @@ local function ShowKeysText()
         -- Wyświetlanie informacji o walucie i poziomie przedmiotów
         frame.currencyText:Show()  -- Pokaż tekst waluty i poziomu przedmiotów
         frame.currencyText:SetText("Restored Coffer Keys: " .. GetCurrencyAmount())
-        print("Postac powyzej 80, wyswietlam keye")
     else
         frame.currencyText:Hide()  -- Ukryj tekst waluty i poziomu przedmiotów
-        print("Postac ponizej 80, chowam keye")
     end
 end
 -- Sprawdzanie poziomu postaci przed wyświetlaniem tekstu poziomu przedmiotów
@@ -311,10 +311,8 @@ local function ShowIlvlText()
         -- Wyświetlanie informacji o walucie i poziomie przedmiotów
         frame.IlvlText:Show()  -- Pokaż tekst waluty i poziomu przedmiotów
         frame.IlvlText:SetText("Equipped ilvl: " .. GetItemLevel())
-        print("Postac powyzej 80, wyswietlam ilvl")
     else
         frame.IlvlText:Hide()  -- Ukryj tekst waluty i poziomu przedmiotów
-        print("Postac ponizej 80, chowam ilvl")
     end
 end
 
@@ -328,7 +326,6 @@ local function UpdateCharacterData()
     Todo_CharacterData[name] = Todo_CharacterData[name] or {}
     Todo_CharacterData[name].level = level
     Todo_CharacterData[name].class = class
-    print("Zapisałem ".. name .." | " .. level .." | " .. class)
 end
 
 -- Funkcja informująca o czasie ostatniego wylogowania
@@ -349,7 +346,7 @@ local function InitializeCharacterData()
         end
         UpdateCharacterData()
         if Todo_Settings.settingsKeys.enableWorldBoss == true then UpdateWorldBossTasks() end
-        if Todo_Settings.settingsKeys.enableSparkQuest == true then UpdateSparkTasks() end
+        if Todo_Settings.settingsKeys.enableSparkQuest == true then  UpdateSparkTasks() end
         if Todo_Settings.settingsKeys.enableSpecialAssignments == true then UpdateSpecialTasks() end
         if Todo_Settings.settingsKeys.enableZonesQuests == true then UpdateZoneTasks() end
         if Todo_Settings.settingsKeys.enableRepQuests == true then UpdateRepTasks() end
@@ -380,8 +377,7 @@ local function OnEvent(self, event, ...)
 
     elseif event == "PLAYER_LEVEL_UP" then
         if Todo_Settings.settingsKeys.enableWorldBoss == true then UpdateWorldBossTasks() end
-        if Todo_Settings.settingsKeys.enableWorldBoss == true then UpdateWorldBossTasks() end
-        if Todo_Settings.settingsKeys.enableSparkQuest == true then UpdateSparkTasks() end
+        if Todo_Settings.settingsKeys.enableSparkQuest == true then  UpdateSparkTasks() end
         if Todo_Settings.settingsKeys.enableSpecialAssignments == true then UpdateSpecialTasks() end
         if Todo_Settings.settingsKeys.enableZonesQuests == true then UpdateZoneTasks() end
         if Todo_Settings.settingsKeys.enableRepQuests == true then UpdateRepTasks() end
@@ -397,7 +393,6 @@ local function OnEvent(self, event, ...)
         end
 
     elseif event == "QUEST_TURNED_IN" then
-        if Todo_Settings.settingsKeys.enableWorldBoss == true then UpdateWorldBossTasks() end
         if Todo_Settings.settingsKeys.enableWorldBoss == true then UpdateWorldBossTasks() end
         if Todo_Settings.settingsKeys.enableSparkQuest == true then UpdateSparkTasks() end
         if Todo_Settings.settingsKeys.enableSpecialAssignments == true then UpdateSpecialTasks() end

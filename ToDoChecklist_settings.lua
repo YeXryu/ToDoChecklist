@@ -167,7 +167,7 @@ SlashCmdList["SHOWSETTINGS"] = function()
     ShowSettingsFrame()
 end
 
--- Rejestracja zdarzeń
+--[[-- Rejestracja zdarzeń
 local function OnEvent(self, event, ...)
     if event == "PLAYER_LOGIN" then
         -- Sprawdzanie czy okno ma być automatycznie pokazane
@@ -176,7 +176,7 @@ local function OnEvent(self, event, ...)
         end
     end
 end
-
+--]]
 -- Rejestracja zdarzeń
-settingsFrame:RegisterEvent("PLAYER_LOGIN")
-settingsFrame:SetScript("OnEvent", OnEvent)
+--settingsFrame:RegisterEvent("PLAYER_LOGIN")
+--settingsFrame:SetScript("OnEvent", OnEvent)
