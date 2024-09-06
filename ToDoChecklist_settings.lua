@@ -66,14 +66,90 @@ saveMainButton:SetScript("OnClick", function()
     end
 end)
 
--- Opcja włączania/wyłączania automatycznego pokazywania okna dodatku
-local autoShowCheckbox = CreateFrame("CheckButton", "AutoShowCheckbox", settingsFrame, "ChatConfigCheckButtonTemplate")
-autoShowCheckbox:SetPoint("TOPLEFT", saveMainButton, "BOTTOMLEFT", -2, -10)
-AutoShowCheckboxText:SetText("Auto-show addon on login")
-autoShowCheckbox:SetChecked(Todo_Settings.AutoShow)
-autoShowCheckbox:SetScript("OnClick", function(self)
-    Todo_Settings.AutoShow = self:GetChecked()
-    SaveSettings()
+local checkbox_settings = {
+    {
+        settingText = "Show Checklist on login",
+        settingKey = "enableChecklist",
+        settingTooltip = "While enabled, your To-Do Checklist will auto-show on login",
+    },
+    {
+        settingText = "Track World Boss",
+        settingKey = "enableWorldBoss",
+        settingTooltip = "While enabled, your To-Do Checklist will be tracking if you've killed World Boss",
+    },
+    {
+        settingText = "Track Weekly Spark Quest",
+        settingKey = "enableSparkQuest",
+        settingTooltip = "While enabled, your To-Do Checklist will be tracking if you've done Weekly Spark Quest",
+    },
+    {
+        settingText = "Track Special Assignments",
+        settingKey = "enableSpecialAssignments",
+        settingTooltip = "While enabled, your To-Do Checklist will be tracking if you've done Special Assignments World Quests",
+    },
+    {
+        settingText = "Track Weekly Zones Quests",
+        settingKey = "enableZonesQuests",
+        settingTooltip = "While enabled, your To-Do Checklist will be tracking if you've done Weekly Quests in all of Khaz Algar zones",
+    },
+    {
+        settingText = "Track Weekly Reputation Quests",
+        settingKey = "enableRepQuests",
+        settingTooltip = "While enabled, your To-Do Checklist will be tracking if you've done Weekly Reputation Quests",
+    },
+    {
+        settingText = "Track Weekly Crafting Quests",
+        settingKey = "enableCraftQuests",
+        settingTooltip = "While enabled, your To-Do Checklist will be tracking if you've done Weekly Crafting Quests",
+    },
+}
+
+local checkboxes = 0
+
+local function CreateCheckbox(checkboxText, key, checkboxTooltip)
+    local checkbox = CreateFrame("CheckButton", "ShowOrHideOption" .. checkboxes, settingsFrame, "UICheckButtonTemplate")
+    checkbox.Text:SetText(checkboxText)
+    checkbox:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 10, -120 + (checkboxes * -30))
+
+    if Todo_Settings.settingsKeys[key] == nil then
+        Todo_Settings.settingsKeys[key] = true
+    end
+
+    checkbox:SetChecked(Todo_Settings.settingsKeys[key])
+
+    checkbox:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText(checkboxTooltip, nil, nil, nil, nil, true)
+    end)
+
+    checkbox:SetScript("OnLeave", function(self)
+        GameTooltip:Hide()
+    end)
+
+    checkbox:SetScript("OnClick", function(self)
+        Todo_Settings.settingsKeys[key] = self:GetChecked()
+    end)
+
+    checkboxes = checkboxes + 1
+
+    return checkbox
+end
+
+-- Invisible frame to scan events
+local eventListenerFrame = CreateFrame("Frame", "ToDoSettingsEventListenerFrame", UIParent)
+
+eventListenerFrame:RegisterEvent("PLAYER_LOGIN")
+
+eventListenerFrame:SetScript("OnEvent", function(self, event)
+  if event == "PLAYER_LOGIN" then
+    if not Todo_Settings.settingsKeys then
+        Todo_Settings.settingsKeys = {}
+    end
+    
+    for _, setting in pairs(checkbox_settings) do
+        CreateCheckbox(setting.settingText, setting.settingKey, setting.settingTooltip)
+    end
+  end
 end)
 
 -- Funkcja pokazująca ramkę ustawień

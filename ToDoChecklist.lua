@@ -8,14 +8,14 @@ local characterDataFrame = nil
 
 -- Inicjalizacja głównej ramki
 local frame = CreateFrame("Frame", "MainFrame", UIParent, "BasicFrameTemplateWithInset")
-frame:SetSize(220, 250)  -- Rozmiar ramki
+frame:SetSize(220, 270)  -- Rozmiar ramki
 frame:SetPoint("CENTER")
 
 -- Tytuł ramki
 frame.title = frame:CreateFontString(nil, "OVERLAY")
 frame.title:SetFontObject("GameFontHighlight")
 frame.title:SetPoint("CENTER", frame.TitleBg, "CENTER", 5, 0)
-frame.title:SetText("Rudy's Checklist")
+frame.title:SetText("Weekly ToDo Checklist")
 
 -- Wyświetlanie nicku aktualnej postaci
 frame.player = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -48,39 +48,96 @@ frame:SetScript("OnHide", function()
     PlaySound(808)
 end)
 
--- Lista zadań
-local tasks = {
-    { name = "World Boss", maximum = 1, quests = { { questId = 71136 } }},
-    { name = "Weekly Dungeon Quest", maximum = 1, quests = { { questId = 83443 }, { questId = 83457 }}},
-    { name = "Weekly WQ Cache", maximum = 2, quests = { { questId = 83280 }, { questId = 83281 }, { questId = 82582 }}},
-    { name = "Worldsoul Quest", maximum = 1, quests = { { questId = 82452 } }},
-    { name = "Weekly PvP Quest", maximum = 1, quests = { { questId = 80186 },{ questId = 80187 }}},-- { questId = 80672 }}},
-    { name = "Weekly Azj-Kahet", maximum = 1, quests = { { questId = 80670 }, { questId = 80671 }, { questId = 80672 }}},
-    { name = "Weekly Hallowfall", maximum = 1, quests = { { questId = 76586 } }},
-    { name = "Weekly Ringing Deeps", maximum = 1, quests = { { questId = 83333 } }},
-    { name = "Weekly Isle of Dorn", maximum = 1, quests = { { questId = 83240 } }},
+-- Lista zadań 
+local worldbosstasks = {
+    { name = "World Boss", maximum = 1, quests = { { questId = 71136 } }}
 }
 
--- Funkcja do sprawdzania ilości waluty o ID 3028
-local function GetCurrencyAmount()
-    local currencyID = 3028
-    local currencyInfo = C_CurrencyInfo.GetCurrencyInfo(currencyID)
-    --if currencyInfo then
-        return currencyInfo.quantity
-    --else
-       -- return 0
-    --end
-end
+local sparktasks = {
+    { name = "Worldsoul Quest", maximum = 1, quests = { { questId = 82452 }, {questId = 82482}, {questId = 82485}, {questId = 82511}, {questId = 82678}}}
+}
 
--- Funkcja do sprawdzania itemlevela
-local function GetItemLevel()
-    local itemlevel = math.floor(select(2, GetAverageItemLevel()))
-    return itemlevel
+local specialtasks = {
+    { name = "Special Assignments WQs", maximum = 2, quests = { { questId = 82787 }, { questId = 83229 }, { questId = 82355 }, {questId =81691}, {questId =81649},{questId =82531}}},--,{questId =81649} }},
+}
+
+local zonestasks = {
+    { name = "Weekly Azj-Kahet", maximum = 1, quests = { { questId = 80670 }, { questId = 80671 }, { questId = 80672 }}},
+    { name = "Weekly Hallowfall", maximum = 1, quests = { { questId = 76586 }}},
+    { name = "Weekly Ringing Deeps", maximum = 1, quests = { { questId = 83333 }}},
+    { name = "Weekly Isle of Dorn", maximum = 1, quests = { { questId = 83240 }}},
+}
+
+local reptasks = {
+    { name = "Weekly Dungeon Quest", maximum = 1, quests = { { questId = 83443 }, { questId = 83457 }, {questId = 83458}}},
+    { name = "Weekly PvP Quest", maximum = 1, quests = { { questId = 80186 }, { questId = 80187 }}},
+    {name = "Weekly Wax Quest", maximum = 1, quests = { {questId =82946 }}}
+}
+
+local craftingtasks = {
+    {name = "Weekly Crafting Quests", maximum = 2, quests = {
+        {questId = 84127}, --BS 
+        {questId = 84128}, --Engi
+        {questId = 84129}, --Inscri
+        {questId = 84130}, --JC
+        {questId = 84131}, --LW
+        {questId = 84132}, --Tailo
+        {questId = 84133}, --Alch
+        {questId = 84084}, --Ench
+        {questId = 84085}, --Ench
+        {questId = 84086}, --Ench
+        {questId = 82965}, --Herb
+        {questId = 82958}, --Herb
+        {questId = 82916}, --Herb
+        {questId = 82962}, --Herb
+        {questId = 82970}, --Herb
+        {questId = 83105}, --Min
+        {questId = 83106}, --Min
+        {questId = 83104}, --Min
+        {questId = 83103}, --Min
+        {questId = 83102}, --Min
+        {questId = 83098}, --Skin
+        {questId = 82993}, --Skin
+        {questId = 82992}, --Skin
+        {questId = 83100}, --Skin
+        {questId = 83097}, --Skin 
+}}}
+
+-- Globalna zmienna do śledzenia aktualnej pozycji Y
+local currentY = -45  -- Ustaw początkową wartość (możesz dostosować w razie potrzeby)
+
+-- Funkcja tworząca główny tekst danych
+local function CreateMainDataText(tasklist)
+    -- Przechowywanie odniesień do tekstów dla tasklist
+    frame.taskTexts = frame.taskTexts or {}  -- Używamy globalnej tablicy do przechowywania wszystkich tekstów
+
+    local previousTaskText
+    for i, _ in ipairs(tasklist) do
+        local taskText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+
+        -- Pozycjonowanie pierwszego elementu w taskliście
+        if i == 1 then
+            -- Pierwszy element, ustaw jego pozycję z użyciem aktualnego Y
+            taskText:SetPoint("TOPLEFT", 10, currentY)
+        else
+            -- Kolejne elementy, pozycjonuj w odniesieniu do poprzedniego
+            taskText:SetPoint("TOPLEFT", previousTaskText, "BOTTOMLEFT", 0, -1)
+        end
+
+        -- Dodanie tekstu do tablicy
+        frame.taskTexts[i] = taskText
+
+        -- Przechowuj referencję do poprzedniego tekstu
+        previousTaskText = taskText
+    end
+
+    -- Zaktualizuj pozycję Y dla kolejnego zestawu tasklist
+    currentY = currentY - (#tasklist * 13)  -- Przesunięcie dla kolejnej listy
 end
 
 local playerLevel
 -- Funkcja aktualizująca dane o zadaniach
-local function UpdateTaskData()
+local function UpdateTaskData(tasklist)
     print("UpdateTaskData started")
     playerLevel = UnitLevel("player")
     if playerLevel < 80 then
@@ -101,7 +158,7 @@ local function UpdateTaskData()
     end
 
     local completedTasksCount = 0
-    for i, task in ipairs(tasks) do
+    for i, task in ipairs(tasklist) do
         local completed = 0  -- Resetowanie licznika ukończonych zadań dla każdego zadania
 
         -- Zliczanie ukończonych zadań
@@ -121,7 +178,7 @@ local function UpdateTaskData()
             else
                 color = "ffff7801"
             end
-            taskText:SetText(task.name .. " " .. WrapTextInColorCode(completed .. " / " .. task.maximum, color))
+            taskText:SetText(task.name .. " " .. WrapTextInColorCode(completed .. "/" .. task.maximum, color))
         end
 
         -- Zapisanie danych do globalnej zmiennej
@@ -132,6 +189,53 @@ local function UpdateTaskData()
 
     -- Zapisanie liczby ukończonych zadań
     Todo_CompletedTasks[UnitName("player")] = completedTasksCount
+end
+
+local function UpdateWorldBossTasks()
+    CreateMainDataText(worldbosstasks)
+    UpdateTaskData(worldbosstasks)
+end
+
+local function UpdateSparkTasks()
+    CreateMainDataText(sparktasks)
+    UpdateTaskData(sparktasks)
+end
+
+local function UpdateSpecialTasks()
+    CreateMainDataText(specialtasks)
+    UpdateTaskData(specialtasks)
+end
+
+local function UpdateZoneTasks()
+    CreateMainDataText(zonestasks)
+    UpdateTaskData(zonestasks)
+end
+
+local function UpdateRepTasks()
+    CreateMainDataText(reptasks)
+    UpdateTaskData(reptasks)
+end
+
+local function UpdateCraftingTasks()
+    CreateMainDataText(craftingtasks)
+    UpdateTaskData(craftingtasks)
+end
+
+-- Funkcja do sprawdzania ilości waluty o ID 3028
+local function GetCurrencyAmount()
+    local currencyID = 3028
+    local currencyInfo = C_CurrencyInfo.GetCurrencyInfo(currencyID)
+    if currencyInfo then
+        return currencyInfo.quantity
+    else
+       return 0
+    end
+end
+
+-- Funkcja do sprawdzania itemlevela
+local function GetItemLevel()
+    local itemlevel = math.floor(select(2, GetAverageItemLevel()))
+    return itemlevel
 end
 
 local function IsWeeklyReset()
@@ -166,8 +270,8 @@ end
 -- Aktualizacja currency 
 local function CurrencyCheck()
     local name = UnitName("player")
-    Todo_CharacterData[name].currency3028 = GetCurrencyAmount()
-    print("Currency check ", Todo_CharacterData[name].currency3028)
+    Todo_CharacterData[name].RCKeys3028 = GetCurrencyAmount()
+    print("Currency check ", Todo_CharacterData[name].RCKeys3028)
 end
 
 local ilvlChecked = false
@@ -244,7 +348,12 @@ local function InitializeCharacterData()
         Todo_CompletedTasks[UnitName("player")] = 0
         end
         UpdateCharacterData()
-        UpdateTaskData()
+        if Todo_Settings.settingsKeys.enableWorldBoss == true then UpdateWorldBossTasks() end
+        if Todo_Settings.settingsKeys.enableSparkQuest == true then UpdateSparkTasks() end
+        if Todo_Settings.settingsKeys.enableSpecialAssignments == true then UpdateSpecialTasks() end
+        if Todo_Settings.settingsKeys.enableZonesQuests == true then UpdateZoneTasks() end
+        if Todo_Settings.settingsKeys.enableRepQuests == true then UpdateRepTasks() end
+        if Todo_Settings.settingsKeys.enableCraftQuests == true then UpdateCraftingTasks() end
         ShowKeysText()
         ShowIlvlText()
         CurrencyCheck()
@@ -270,7 +379,13 @@ local function OnEvent(self, event, ...)
         C_Timer.After(1, InitializeCharacterData)
 
     elseif event == "PLAYER_LEVEL_UP" then
-        UpdateCharacterData()
+        if Todo_Settings.settingsKeys.enableWorldBoss == true then UpdateWorldBossTasks() end
+        if Todo_Settings.settingsKeys.enableWorldBoss == true then UpdateWorldBossTasks() end
+        if Todo_Settings.settingsKeys.enableSparkQuest == true then UpdateSparkTasks() end
+        if Todo_Settings.settingsKeys.enableSpecialAssignments == true then UpdateSpecialTasks() end
+        if Todo_Settings.settingsKeys.enableZonesQuests == true then UpdateZoneTasks() end
+        if Todo_Settings.settingsKeys.enableRepQuests == true then UpdateRepTasks() end
+        if Todo_Settings.settingsKeys.enableCraftQuests == true then UpdateCraftingTasks() end
         ShowKeysText()
         ShowIlvlText()
 
@@ -278,10 +393,17 @@ local function OnEvent(self, event, ...)
         local currencyID = ...
         if currencyID == 3028 then
             CurrencyCheck()
+            ShowKeysText()
         end
 
     elseif event == "QUEST_TURNED_IN" then
-        UpdateTaskData()
+        if Todo_Settings.settingsKeys.enableWorldBoss == true then UpdateWorldBossTasks() end
+        if Todo_Settings.settingsKeys.enableWorldBoss == true then UpdateWorldBossTasks() end
+        if Todo_Settings.settingsKeys.enableSparkQuest == true then UpdateSparkTasks() end
+        if Todo_Settings.settingsKeys.enableSpecialAssignments == true then UpdateSpecialTasks() end
+        if Todo_Settings.settingsKeys.enableZonesQuests == true then UpdateZoneTasks() end
+        if Todo_Settings.settingsKeys.enableRepQuests == true then UpdateRepTasks() end
+        if Todo_Settings.settingsKeys.enableCraftQuests == true then UpdateCraftingTasks() end
 
     elseif event == "PLAYER_AVG_ITEM_LEVEL_UPDATE" then
         C_Timer.After(0.5,ilvlCheck)
@@ -301,25 +423,6 @@ frame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
 frame:RegisterEvent("PLAYER_AVG_ITEM_LEVEL_UPDATE")
 frame:RegisterEvent("PLAYER_LOGOUT")
 frame:SetScript("OnEvent", OnEvent)
-
--- Tworzenie tekstu dla każdego zadania
-frame.taskTexts = {}  -- Tablica do przechowywania odniesień do tekstów
-local previousTaskText
-for i, task in ipairs(tasks) do
-    local taskText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    if i == 1 then
-        -- Pierwszy element, ustaw jego pozycję bezpośrednio
-        taskText:SetPoint("TOPLEFT", 10, -40)
-    else
-        -- Kolejne elementy, pozycjonuj w odniesieniu do poprzedniego
-        taskText:SetPoint("TOPLEFT", previousTaskText, "BOTTOMLEFT", 0, -2)
-    end
-
-    -- Dodanie tekstu do tablicy
-    frame.taskTexts[i] = taskText
-
-    previousTaskText = taskText
-end
 
 -- Dodanie tekstu dla waluty 3028
 frame.currencyText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -350,7 +453,7 @@ local function ShowCharacterDataFrame()
         -- Jeżeli nie istnieje, utwórz je na nowo
         if not characterDataFrame then
             characterDataFrame = CreateFrame("Frame", "CharacterDataFrame", UIParent, "BasicFrameTemplateWithInset")
-            characterDataFrame:SetSize(230, 270)
+            characterDataFrame:SetSize(240, 270)
             characterDataFrame:SetPoint("CENTER")
             characterDataFrame:EnableMouse(true)
             characterDataFrame:SetMovable(true)
@@ -431,19 +534,30 @@ local function ShowCharacterDataFrame()
                         characterHeader = WrapTextInColorCode(characterName .. " (" .. characterData.class .. ")", headerColor)
                     end
 
-                    local characterDisplayText = "--------------------------------------\n".. characterHeader .. "\n" .. "---------------------------------------\n"
+                    local characterDisplayText = "---------------------------------------\n".. characterHeader .. "\n" .. "---------------------------------------\n"
                     -- Dodawanie danych o zadaniach
-                    for _, task in ipairs(tasks) do
-                        local taskName = task.name
-                        local completed = characterData[taskName] or 0
-                        local taskColor = (completed >= task.maximum) and "FF00ff96" or "ffff7801"
-                        characterDisplayText = characterDisplayText .. WrapTextInColorCode(taskName .. ": " .. completed .. " / " .. task.maximum, taskColor) .. "\n"
+                    local function ProcessTaskList(taskList, characterData)
+                        for _, task in ipairs(taskList) do
+                            local taskName = task.name
+                            local completed = characterData[taskName] or 0
+                            local taskColor = (completed >= task.maximum) and "FF00ff96" or "ffff7801"
+                            characterDisplayText = characterDisplayText .. WrapTextInColorCode(taskName .. ": " .. completed .. "/" .. task.maximum, taskColor) .. "\n"
+                        end
+                        return characterDisplayText
                     end
-                    characterDisplayText = characterDisplayText .. "Restored Coffer Keys: " .. (characterData.currency3028 or 0) .. "\n" .. "Equipped ilvl: " .. (characterData.equippedIlvl) .. "\n"
+
+                    local worldBossText = ProcessTaskList(worldbosstasks, characterData)
+                    local sparkText = ProcessTaskList(sparktasks, characterData)
+                    local specialText = ProcessTaskList(specialtasks, characterData)
+                    local zoneText = ProcessTaskList(zonestasks, characterData)
+                    local repText = ProcessTaskList(reptasks, characterData)
+                    local craftingText = ProcessTaskList(craftingtasks, characterData)
+
+                    characterDisplayText = characterDisplayText .. "Restored Coffer Keys: " .. (characterData.RCKeys3028 or 0) .. "\n" .. "Equipped ilvl: " .. (characterData.equippedIlvl) .. "\n"
                     characterText:SetJustifyH("LEFT")
                     characterText:SetText(characterDisplayText)
                     previousCharacterText = characterText
-                end    
+                end
             else
                 local noDataText = content:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
                 noDataText:SetPoint("TOP", content, "TOP", 0, -20)
