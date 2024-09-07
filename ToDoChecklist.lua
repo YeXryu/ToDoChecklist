@@ -130,7 +130,6 @@ local function CreateMainDataText(tasklist)
         -- Przechowuj referencję do poprzedniego tekstu
         previousTaskText = taskText
     end
-
     -- Zaktualizuj pozycję Y dla kolejnego zestawu tasklist
     currentY = currentY - (#tasklist * 13)  -- Przesunięcie dla kolejnej listy
 end
@@ -337,7 +336,7 @@ end
 local CharacterChecked = false
 
 local function InitializeCharacterData()
-    local cooldownTime = 1
+    local cooldownTime = 2
     if not CharacterChecked then
         if IsWeeklyReset() then
         ShowResetMessage()
@@ -372,16 +371,24 @@ local function OnEvent(self, event, ...)
             frame:SetPoint(pos.point, pos.relativeTo, pos.relativePoint, pos.xOfs, pos.yOfs)
         end
 
-    elseif event == "PLAYER_LOGIN" or event == "PLAYER_ENTERING_WORLD" then
+    elseif event == "PLAYER_LOGIN" then
         C_Timer.After(1, InitializeCharacterData)
 
+    elseif event == "PLAYER_ENTERING_WORLD" then
+        if Todo_Settings.settingsKeys.enableWorldBoss == true then UpdateTaskData(worldbosstasks) end
+        if Todo_Settings.settingsKeys.enableSparkQuest == true then UpdateTaskData(sparktasks) end
+        if Todo_Settings.settingsKeys.enableSpecialAssignments == true then UpdateTaskData(specialtasks) end
+        if Todo_Settings.settingsKeys.enableZonesQuests == true then UpdateTaskData(zonestasks) end
+        if Todo_Settings.settingsKeys.enableRepQuests == true then UpdateTaskData(reptasks) end
+        if Todo_Settings.settingsKeys.enableCraftQuests == true then UpdateTaskData(craftingtasks) end
+
     elseif event == "PLAYER_LEVEL_UP" then
-        if Todo_Settings.settingsKeys.enableWorldBoss == true then UpdateWorldBossTasks() end
-        if Todo_Settings.settingsKeys.enableSparkQuest == true then  UpdateSparkTasks() end
-        if Todo_Settings.settingsKeys.enableSpecialAssignments == true then UpdateSpecialTasks() end
-        if Todo_Settings.settingsKeys.enableZonesQuests == true then UpdateZoneTasks() end
-        if Todo_Settings.settingsKeys.enableRepQuests == true then UpdateRepTasks() end
-        if Todo_Settings.settingsKeys.enableCraftQuests == true then UpdateCraftingTasks() end
+        if Todo_Settings.settingsKeys.enableWorldBoss == true then UpdateTaskData(worldbosstasks) end
+        if Todo_Settings.settingsKeys.enableSparkQuest == true then UpdateTaskData(sparktasks) end
+        if Todo_Settings.settingsKeys.enableSpecialAssignments == true then UpdateTaskData(specialtasks) end
+        if Todo_Settings.settingsKeys.enableZonesQuests == true then UpdateTaskData(zonestasks) end
+        if Todo_Settings.settingsKeys.enableRepQuests == true then UpdateTaskData(reptasks) end
+        if Todo_Settings.settingsKeys.enableCraftQuests == true then UpdateTaskData(craftingtasks) end
         ShowKeysText()
         ShowIlvlText()
 
@@ -393,12 +400,12 @@ local function OnEvent(self, event, ...)
         end
 
     elseif event == "QUEST_TURNED_IN" then
-        if Todo_Settings.settingsKeys.enableWorldBoss == true then UpdateWorldBossTasks() end
-        if Todo_Settings.settingsKeys.enableSparkQuest == true then UpdateSparkTasks() end
-        if Todo_Settings.settingsKeys.enableSpecialAssignments == true then UpdateSpecialTasks() end
-        if Todo_Settings.settingsKeys.enableZonesQuests == true then UpdateZoneTasks() end
-        if Todo_Settings.settingsKeys.enableRepQuests == true then UpdateRepTasks() end
-        if Todo_Settings.settingsKeys.enableCraftQuests == true then UpdateCraftingTasks() end
+        if Todo_Settings.settingsKeys.enableWorldBoss == true then UpdateTaskData(worldbosstasks) end
+        if Todo_Settings.settingsKeys.enableSparkQuest == true then UpdateTaskData(sparktasks) end
+        if Todo_Settings.settingsKeys.enableSpecialAssignments == true then UpdateTaskData(specialtasks) end
+        if Todo_Settings.settingsKeys.enableZonesQuests == true then UpdateTaskData(zonestasks) end
+        if Todo_Settings.settingsKeys.enableRepQuests == true then UpdateTaskData(reptasks) end
+        if Todo_Settings.settingsKeys.enableCraftQuests == true then UpdateTaskData(craftingtasks) end
 
     elseif event == "PLAYER_AVG_ITEM_LEVEL_UPDATE" then
         C_Timer.After(0.5,ilvlCheck)
