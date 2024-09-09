@@ -6,6 +6,23 @@ Todo_CompletedTasks = Todo_CompletedTasks or {}
 -- Zmienna do przechowywania odniesienia do okna z danymi postaci
 local characterDataFrame = nil
 
+-- Tablica z kolorami postaci
+
+local classColorTable = { 
+    {class = "Death Knight", colour = "FFC41E3A"},
+    {class = "Demon Hunter", colour = "FFA330C9"},
+    {class = "Druid", colour = "FFFF7C0A"},
+    {class = "Evoker", colour = "FF33937F"},
+    {class = "Hunter", colour = "FFAAD372"},
+    {class = "Mage", colour = "FF3FC7EB"},
+    {class = "Monk", colour = "FF00FF98"},
+    {class = "Paladin", colour = "FFF48CBA"},
+    {class = "Priest", colour = "FFFFFFFF"},
+    {class = "Rogue", colour = "FFFFF468"},
+    {class = "Shaman", colour = "FF0070DD"},
+    {class = "Warlock", colour = "FF8788EE"},
+    {class = "Warrior", colour = "FFC69B6D"},
+}
 -- Inicjalizacja głównej ramki
 local frame = CreateFrame("Frame", "MainFrame", UIParent, "BasicFrameTemplateWithInset")
 frame:SetSize(220, 270)  -- Rozmiar ramki
@@ -20,7 +37,15 @@ frame.title:SetText("Weekly ToDo Checklist")
 -- Wyświetlanie nicku aktualnej postaci
 frame.player = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 frame.player:SetPoint("TOP", 0, -27)
-frame.player:SetText("Character: " .. UnitName("player"))
+local function GetClassColor()
+    for _, classInfo in ipairs(classColorTable) do
+        local class = UnitClass("player")
+        if classInfo.class == class then
+            return classInfo.colour
+        end
+    end
+end
+frame.player:SetText("Character: " .. WrapTextInColorCode(UnitName("player"), GetClassColor()))
 
 -- Dodanie komunikatu dla niskiego poziomu
 frame.levelMessage = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -103,120 +128,111 @@ local craftingtasks = {
         {questId = 83097}, --Skin 
 }}}
 
--- Globalna zmienna do śledzenia aktualnej pozycji Y
-local currentY = -45  -- Ustaw początkową wartość (możesz dostosować w razie potrzeby)
+local taskTextTable
+local taskNameIndex
+local completedTasksCount = 0
+local playerLevel
 
--- Funkcja tworząca główny tekst danych
-local function CreateMainDataText(tasklist)
-    -- Przechowywanie odniesień do tekstów dla tasklist
-    frame.taskTexts = frame.taskTexts or {}  -- Używamy globalnej tablicy do przechowywania wszystkich tekstów
+local function CreateOrUpdateTaskText(frame)
+    if not frame.taskTexts then
+        frame.taskTexts = {}
+    end
 
-    local previousTaskText
-    for i, _ in ipairs(tasklist) do
-        local taskText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    -- Usuń poprzednie teksty z ramki
+    for _, text in pairs(frame.taskTexts) do
+        text:SetText("")  -- Wyczyść tekst, aby go nadpisać
+    end
 
-        -- Pozycjonowanie pierwszego elementu w taskliście
-        if i == 1 then
-            -- Pierwszy element, ustaw jego pozycję z użyciem aktualnego Y
-            taskText:SetPoint("TOPLEFT", 10, currentY)
+    -- Zmienna dla pozycjonowania tekstów
+    local yOffset = -45
+
+    -- Przejdź przez taskTextTable, korzystając z ipairs dla zachowania kolejności
+    for i, taskText in ipairs(taskTextTable) do
+        local text = frame.taskTexts[i]
+
+        if text then
+            -- Nadpisz istniejący tekst
+            text:SetText(taskText)
         else
-            -- Kolejne elementy, pozycjonuj w odniesieniu do poprzedniego
-            taskText:SetPoint("TOPLEFT", previousTaskText, "BOTTOMLEFT", 0, -1)
+            -- Stwórz nowy tekst, jeśli go nie ma
+            text = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            text:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, yOffset)  -- Pozycjonowanie
+            text:SetText(taskText)
+            frame.taskTexts[i] = text
         end
 
-        -- Dodanie tekstu do tablicy
-        frame.taskTexts[i] = taskText
-
-        -- Przechowuj referencję do poprzedniego tekstu
-        previousTaskText = taskText
+        -- Zwiększ przesunięcie Y dla następnych tekstów
+        yOffset = yOffset - 12
     end
-    -- Zaktualizuj pozycję Y dla kolejnego zestawu tasklist
-    currentY = currentY - (#tasklist * 13)  -- Przesunięcie dla kolejnej listy
+
+    -- Aktualizacja ramki po zmianach
+    frame:Show()  -- Upewnij się, że ramka jest wyświetlana po zmianach
 end
 
-local playerLevel
--- Funkcja aktualizująca dane o zadaniach
+
+-- Tablica do przechowywania indeksów zadań na podstawie ich nazw
+taskNameIndex = taskNameIndex or {}
+
 local function UpdateTaskData(tasklist)
     playerLevel = UnitLevel("player")
+
+    -- Ukryj zadania dla graczy poniżej poziomu 80
     if playerLevel < 80 then
-        -- Ukryj listę zadań
-        for _, taskText in ipairs(frame.taskTexts) do
-            taskText:Hide()
-        end
-        -- Pokaż komunikat
         frame.levelMessage:Show()
         return
     else
-        -- Pokaż listę zadań
-        for _, taskText in ipairs(frame.taskTexts) do
-            taskText:Show()
-        end
-        -- Ukryj komunikat
         frame.levelMessage:Hide()
     end
 
-    local completedTasksCount = 0
-    for i, task in ipairs(tasklist) do
-        local completed = 0  -- Resetowanie licznika ukończonych zadań dla każdego zadania
+    -- Zresetuj licznik ukończonych zadań
+    completedTasksCount = 0
+    taskTextTable = taskTextTable or {}  -- Upewnij się, że tablica istnieje
 
-        -- Zliczanie ukończonych zadań
-        for _, idk in pairs(task.quests) do
-            if C_QuestLog.IsQuestFlaggedCompleted(idk.questId) then
+    -- Przejdź przez tasklist i zaktualizuj dane o zadaniach
+    for i, task in ipairs(tasklist) do
+        local completed = 0  -- Reset ukończonych zadań dla każdego zadania
+
+        -- Sprawdź quest ID i stan ukończenia
+        for _, questData in pairs(task.quests) do
+            if C_QuestLog.IsQuestFlaggedCompleted(questData.questId) then
                 completed = completed + 1
             end
         end
 
-        -- Aktualizacja tekstu
-        local taskText = frame.taskTexts[i]
-        if taskText then
-            local color = ""
-            if completed >= task.maximum then
-                color = "FF00ff96"
-                completedTasksCount = completedTasksCount + 1
-            else
-                color = "ffff7801"
-            end
-            taskText:SetText(task.name .. " " .. WrapTextInColorCode(completed .. "/" .. task.maximum, color))
+        -- Przygotuj tekst dla zadania
+        local taskText = ""
+        local color = ""
+        if completed >= task.maximum then
+            color = "FF00ff96"  -- Zielony dla ukończonych zadań
+            completedTasksCount = completedTasksCount + 1
+        else
+            color = "ffff7801"  -- Pomarańczowy dla nieukończonych zadań
         end
 
-        -- Zapisanie danych do globalnej zmiennej
+        taskText = task.name .. " " .. WrapTextInColorCode(completed .. "/" .. task.maximum, color)
+
+        -- Sprawdź, czy zadanie już istnieje w tablicy
+        if taskNameIndex[task.name] then
+            -- Nadpisz istniejący wpis
+            local index = taskNameIndex[task.name]
+            taskTextTable[index] = taskText
+        else
+            -- Dodaj nowy wpis, jeśli nie istnieje
+            table.insert(taskTextTable, taskText)
+            taskNameIndex[task.name] = #taskTextTable  -- Zapisz indeks tego zadania
+        end
+
+        -- Zapisz dane o zadaniu do postaci
         local playerName = UnitName("player")
         Todo_CharacterData[playerName] = Todo_CharacterData[playerName] or {}
         Todo_CharacterData[playerName][task.name] = completed
     end
 
-    -- Zapisanie liczby ukończonych zadań
+    -- Zapisz ukończone zadania dla gracza
     Todo_CompletedTasks[UnitName("player")] = completedTasksCount
-end
 
-local function UpdateWorldBossTasks()
-    CreateMainDataText(worldbosstasks)
-    UpdateTaskData(worldbosstasks)
-end
-
-local function UpdateSparkTasks()
-    CreateMainDataText(sparktasks)
-    UpdateTaskData(sparktasks)
-end
-
-local function UpdateSpecialTasks()
-    CreateMainDataText(specialtasks)
-    UpdateTaskData(specialtasks)
-end
-
-local function UpdateZoneTasks()
-    CreateMainDataText(zonestasks)
-    UpdateTaskData(zonestasks)
-end
-
-local function UpdateRepTasks()
-    CreateMainDataText(reptasks)
-    UpdateTaskData(reptasks)
-end
-
-local function UpdateCraftingTasks()
-    CreateMainDataText(craftingtasks)
-    UpdateTaskData(craftingtasks)
+    -- Wywołaj CreateOrUpdateTaskText, aby zaktualizować UI
+    CreateOrUpdateTaskText(frame)
 end
 
 -- Funkcja do sprawdzania ilości waluty o ID 3028
@@ -334,7 +350,6 @@ local function UpdateLogoutTime()
 end
 
 local CharacterChecked = false
-
 local function InitializeCharacterData()
     local cooldownTime = 2
     if not CharacterChecked then
@@ -344,16 +359,18 @@ local function InitializeCharacterData()
         Todo_CompletedTasks[UnitName("player")] = 0
         end
         UpdateCharacterData()
-        if Todo_Settings.settingsKeys.enableWorldBoss == true then UpdateWorldBossTasks() end
-        if Todo_Settings.settingsKeys.enableSparkQuest == true then  UpdateSparkTasks() end
-        if Todo_Settings.settingsKeys.enableSpecialAssignments == true then UpdateSpecialTasks() end
-        if Todo_Settings.settingsKeys.enableZonesQuests == true then UpdateZoneTasks() end
-        if Todo_Settings.settingsKeys.enableRepQuests == true then UpdateRepTasks() end
-        if Todo_Settings.settingsKeys.enableCraftQuests == true then UpdateCraftingTasks() end
+        if Todo_Settings.settingsKeys.enableWorldBoss == true then UpdateTaskData(worldbosstasks) end
+        if Todo_Settings.settingsKeys.enableSparkQuest == true then UpdateTaskData(sparktasks) end
+        if Todo_Settings.settingsKeys.enableSpecialAssignments == true then UpdateTaskData(specialtasks) end
+        if Todo_Settings.settingsKeys.enableZonesQuests == true then UpdateTaskData(zonestasks) end
+        if Todo_Settings.settingsKeys.enableRepQuests == true then UpdateTaskData(reptasks) end
+        if Todo_Settings.settingsKeys.enableCraftQuests == true then UpdateTaskData(craftingtasks) end
         ShowKeysText()
         ShowIlvlText()
         CurrencyCheck()
         ilvlCheck()
+        CreateOrUpdateTaskText(frame)
+        completedTasksCount = 0
         CharacterChecked = true
         C_Timer.After(cooldownTime, function()
             CharacterChecked = false
@@ -381,6 +398,8 @@ local function OnEvent(self, event, ...)
         if Todo_Settings.settingsKeys.enableZonesQuests == true then UpdateTaskData(zonestasks) end
         if Todo_Settings.settingsKeys.enableRepQuests == true then UpdateTaskData(reptasks) end
         if Todo_Settings.settingsKeys.enableCraftQuests == true then UpdateTaskData(craftingtasks) end
+        CreateOrUpdateTaskText(frame)
+        completedTasksCount = 0
 
     elseif event == "PLAYER_LEVEL_UP" then
         if Todo_Settings.settingsKeys.enableWorldBoss == true then UpdateTaskData(worldbosstasks) end
@@ -389,6 +408,8 @@ local function OnEvent(self, event, ...)
         if Todo_Settings.settingsKeys.enableZonesQuests == true then UpdateTaskData(zonestasks) end
         if Todo_Settings.settingsKeys.enableRepQuests == true then UpdateTaskData(reptasks) end
         if Todo_Settings.settingsKeys.enableCraftQuests == true then UpdateTaskData(craftingtasks) end
+        CreateOrUpdateTaskText(frame)
+        completedTasksCount = 0
         ShowKeysText()
         ShowIlvlText()
 
@@ -406,6 +427,8 @@ local function OnEvent(self, event, ...)
         if Todo_Settings.settingsKeys.enableZonesQuests == true then UpdateTaskData(zonestasks) end
         if Todo_Settings.settingsKeys.enableRepQuests == true then UpdateTaskData(reptasks) end
         if Todo_Settings.settingsKeys.enableCraftQuests == true then UpdateTaskData(craftingtasks) end
+        CreateOrUpdateTaskText(frame)
+        completedTasksCount = 0
 
     elseif event == "PLAYER_AVG_ITEM_LEVEL_UPDATE" then
         C_Timer.After(0.5,ilvlCheck)

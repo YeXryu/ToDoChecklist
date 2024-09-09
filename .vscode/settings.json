@@ -26,6 +26,9 @@
         "StaticPopupDialogs",
         "StaticPopup_Show",
         "StaticPopup_Hide",
-        "UIDropDownMenu_GetSelectedName"
+        "UIDropDownMenu_GetSelectedName",
+        "class",
+        "ObjectiveTrackerFrame",
+        "DEFAULT_CHAT_FRAME"
     ]
 }
